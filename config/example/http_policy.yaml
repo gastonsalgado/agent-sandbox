@@ -1,0 +1,139 @@
+rules:
+  # ═══════════════════════════════════════════════════════════
+  # GitHub (credentials injected by proxy)
+  # Default: deny. Only explicitly allowed operations pass.
+  # ═══════════════════════════════════════════════════════════
+
+  # Git reads
+  - match: {domain_contains: "github.com", path_contains: "/info/refs"}
+    action: allow
+    label: git fetch
+
+  - match: {domain_contains: "github.com", path_contains: "git-upload-pack"}
+    action: allow
+    label: git pull
+
+  # Git writes
+  - match: {domain_contains: "github.com", path_contains: "git-receive-pack"}
+    action: approval
+    label: git push
+
+  # API reads
+  - match: {domain_contains: "github.com", method: GET}
+    action: allow
+    label: github read
+
+  # GraphQL (gh CLI uses POST /graphql for reads and writes)
+  - match: {domain_contains: "github.com", path_contains: "/graphql"}
+    action: allow
+    label: github graphql
+
+  # API writes
+  - match: {domain_contains: "github.com", method: POST, path_contains: "/pulls"}
+    action: approval
+    label: create PR
+
+  - match: {domain_contains: "github.com", method: POST}
+    action: approval
+    label: github write
+
+  - match: {domain_contains: "github.com", method: PUT}
+    action: approval
+    label: github update
+
+  - match: {domain_contains: "github.com", method: DELETE}
+    action: approval
+    label: github delete
+
+  - match: {domain_contains: "github.com", method: PATCH}
+    action: approval
+    label: github patch
+
+  # Default deny for github
+  - match: {domain_contains: "github.com"}
+    action: deny
+    label: github blocked
+
+  # ═══════════════════════════════════════════════════════════
+  # GCP (credentials injected by proxy)
+  # Default: deny. Only explicitly allowed operations pass.
+  # ═══════════════════════════════════════════════════════════
+
+  # Sensitive services — always require approval
+  - match: {domain: "secretmanager.googleapis.com"}
+    action: approval
+    label: gcp secret manager
+
+  - match: {domain: "iam.googleapis.com"}
+    action: approval
+    label: gcp iam
+
+  - match: {domain: "cloudkms.googleapis.com"}
+    action: approval
+    label: gcp kms
+
+  - match: {domain: "sts.googleapis.com"}
+    action: approval
+    label: gcp security token service
+
+  # OAuth token refresh
+  - match: {domain: "oauth2.googleapis.com"}
+    action: allow
+    label: gcp oauth
+
+  # Logging (POST is used for reads)
+  - match: {domain: "logging.googleapis.com"}
+    action: allow
+    label: gcp logging
+
+  # General reads
+  - match: {domain_contains: "googleapis.com", method: GET}
+    action: allow
+    label: gcp read
+
+  # General writes
+  - match: {domain_contains: "googleapis.com", method: POST}
+    action: approval
+    label: gcp write
+
+  - match: {domain_contains: "googleapis.com", method: PUT}
+    action: approval
+    label: gcp update
+
+  - match: {domain_contains: "googleapis.com", method: DELETE}
+    action: approval
+    label: gcp delete
+
+  - match: {domain_contains: "googleapis.com", method: PATCH}
+    action: approval
+    label: gcp patch
+
+  # Default deny for GCP
+  - match: {domain_contains: "googleapis.com"}
+    action: deny
+    label: gcp blocked
+
+  # ═══════════════════════════════════════════════════════════
+  # Slack (credentials injected by proxy)
+  # Default: deny.
+  # ═══════════════════════════════════════════════════════════
+
+  - match: {domain_contains: "slack.com", method: GET}
+    action: allow
+    label: slack read
+
+  - match: {domain_contains: "slack.com", method: POST}
+    action: approval
+    label: slack write
+
+  - match: {domain_contains: "slack.com"}
+    action: deny
+    label: slack blocked
+
+  # ═══════════════════════════════════════════════════════════
+  # Everything else — free internet access
+  # ═══════════════════════════════════════════════════════════
+
+  - match: {domain: "*"}
+    action: allow
+    label: passthrough

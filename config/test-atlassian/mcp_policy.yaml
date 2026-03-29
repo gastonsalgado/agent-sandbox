@@ -1,0 +1,15 @@
+upstreams:
+  atlassian:
+    type: http
+    url: "https://mcp.atlassian.com/v1/mcp"
+    auth:
+      source: oauth
+
+rules:
+  - match: {tool_contains: "get"}
+    action: allow
+  - match: {tool_contains: "search"}
+    action: allow
+  - match: {tool: "*"}
+    action: approval
+    label: write

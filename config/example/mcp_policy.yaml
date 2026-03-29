@@ -1,0 +1,85 @@
+upstreams:
+  atlassian:
+    type: http
+    url: "https://mcp.atlassian.com/v1/mcp"
+    auth:
+      source: oauth
+
+  github:
+    type: http
+    url: "https://api.githubcopilot.com/mcp/"
+    auth:
+      source: vault
+      token_key: github_token
+
+  slack:
+    type: http
+    url: "https://mcp.slack.com/mcp"
+    auth:
+      source: oauth
+      oauth:
+        clientId: "1601185624273.8899143856786"
+        callbackPort: 3118
+
+# Tool-level policies
+rules:
+  # ═══════════════════════════════════════════════════════════
+  # Reads — allowed
+  # ═══════════════════════════════════════════════════════════
+  - match: {tool_contains: "list"}
+    action: allow
+  - match: {tool_contains: "get"}
+    action: allow
+  - match: {tool_contains: "describe"}
+    action: allow
+  - match: {tool_contains: "search"}
+    action: allow
+  - match: {tool_contains: "read"}
+    action: allow
+
+  # ═══════════════════════════════════════════════════════════
+  # Writes — need approval
+  # ═══════════════════════════════════════════════════════════
+  - match: {tool_contains: "create"}
+    action: approval
+    label: create operation
+  - match: {tool_contains: "update"}
+    action: approval
+    label: update operation
+  - match: {tool_contains: "delete"}
+    action: approval
+    label: delete operation
+  - match: {tool_contains: "push"}
+    action: approval
+    label: push operation
+  - match: {tool_contains: "merge"}
+    action: approval
+    label: merge operation
+  - match: {tool_contains: "transition"}
+    action: approval
+    label: transition operation
+  - match: {tool_contains: "send"}
+    action: approval
+    label: send operation
+  - match: {tool_contains: "apply"}
+    action: approval
+    label: apply operation
+  - match: {tool_contains: "deploy"}
+    action: approval
+    label: deploy operation
+  - match: {tool_contains: "edit"}
+    action: approval
+    label: edit operation
+  - match: {tool_contains: "add"}
+    action: approval
+    label: add operation
+  - match: {tool_contains: "comment"}
+    action: approval
+    label: comment operation
+
+  # ═══════════════════════════════════════════════════════════
+  # Default deny
+  # ═══════════════════════════════════════════════════════════
+  - match: {tool: "*"}
+    action: deny
+    label: unknown tool
