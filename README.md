@@ -12,21 +12,26 @@ Secure execution environment for running [Claude Code](https://docs.anthropic.co
 
 ## Architecture
 
-```
-Docker Container                         Host
-+------------------------+     +-----------------------+
-| Claude Code            |     | HTTP Proxy (mitmproxy)|
-|   CLI (git, curl, etc) |---->|   credential inject   |---> External APIs
-|                        |     |   policy enforcement   |
-|   MCP tools            |---->| MCP Gateway (Node.js) |---> Upstream MCP Servers
-|                        |     |   tool filtering       |     (Atlassian, GitHub,
-+------------------------+     |   approval workflow    |      Slack, etc.)
-                               +-----------------------+
-                                        |
-                               +--------+--------+
-                               | Vault            |
-                               | (credentials)    |
-                               +-----------------+
+```mermaid
+graph LR
+    subgraph Container["Docker Container"]
+        CC[Claude Code]
+        CLI["CLI tools\n(git, curl, gcloud)"]
+        MCP["MCP tools"]
+    end
+
+    subgraph Host
+        Proxy["HTTP Proxy\n(mitmproxy)\n- credential injection\n- policy enforcement\n- approval workflow"]
+        Gateway["MCP Gateway\n(Node.js)\n- tool filtering\n- policy enforcement\n- approval workflow"]
+        Vault["Vault\n(credentials)"]
+    end
+
+    CLI -->|HTTPS| Proxy
+    MCP -->|SSE| Gateway
+    Proxy -->|inject credentials| APIs["External APIs\n(GitHub, GCP, Slack)"]
+    Gateway -->|OAuth / Bearer| Upstreams["Upstream MCP Servers\n(Atlassian, GitHub, Slack)"]
+    Vault -.->|tokens| Proxy
+    Vault -.->|tokens| Gateway
 ```
 
 ## Prerequisites
