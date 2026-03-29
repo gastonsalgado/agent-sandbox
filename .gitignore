@@ -1,0 +1,23 @@
+# Dependencies
+.venv/
+node_modules/
+
+# Build artifacts
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+dist/
+
+# Sensitive data
+vault/
+clients/
+logs/
+
+# Generated at build time
+container/mitmproxy-ca-cert.pem
+
+# IDE
+.idea/
+.vscode/
+*.swp
