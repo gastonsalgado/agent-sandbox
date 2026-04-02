@@ -2,7 +2,6 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { readFileSync } from "fs";
 import type { GatewayConfig, UpstreamConfig } from "./config.js";
 import { getValidAccessToken, login } from "./oauth.js";
 
@@ -10,13 +9,6 @@ export class UpstreamManager {
   private clients = new Map<string, Client>();
   private toolMap = new Map<string, string>(); // tool name → upstream name
   private toolDefs = new Map<string, Tool>(); // tool name → definition
-  private vaultDir: string;
-  private clientId: string;
-
-  constructor(vaultDir: string, clientId: string) {
-    this.vaultDir = vaultDir;
-    this.clientId = clientId;
-  }
 
   async start(config: GatewayConfig): Promise<void> {
     for (const [name, upstream] of Object.entries(config.upstreams)) {
@@ -104,10 +96,12 @@ export class UpstreamManager {
     const auth = config.auth;
     if (!auth) return null;
 
-    if (auth.source === "vault") {
-      const tokenKey = auth.token_key!;
-      const tokenPath = `${this.vaultDir}/${this.clientId}/${tokenKey}`;
-      const token = readFileSync(tokenPath, "utf-8").trim();
+    if (auth.source === "env") {
+      const envVar = auth.env_var!;
+      const token = process.env[envVar];
+      if (!token) {
+        throw new Error(`Environment variable ${envVar} not set`);
+      }
       return { Authorization: `Bearer ${token}` };
     }
 

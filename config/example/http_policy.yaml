@@ -1,7 +1,6 @@
 rules:
   # ═══════════════════════════════════════════════════════════
   # GitHub (credentials injected by proxy)
-  # Default: deny. Only explicitly allowed operations pass.
   # ═══════════════════════════════════════════════════════════
 
   # Git reads
@@ -49,10 +48,10 @@ rules:
     action: approval
     label: github patch
 
-  # Default deny for github
+  # Default for github — approval (credentials injected)
   - match: {domain_contains: "github.com"}
-    action: deny
-    label: github blocked
+    action: approval
+    label: github unknown
 
   # ═══════════════════════════════════════════════════════════
   # GCP (credentials injected by proxy)
@@ -108,14 +107,13 @@ rules:
     action: approval
     label: gcp patch
 
-  # Default deny for GCP
+  # Default for GCP — approval (credentials injected)
   - match: {domain_contains: "googleapis.com"}
-    action: deny
-    label: gcp blocked
+    action: approval
+    label: gcp unknown
 
   # ═══════════════════════════════════════════════════════════
   # Slack (credentials injected by proxy)
-  # Default: deny.
   # ═══════════════════════════════════════════════════════════
 
   - match: {domain_contains: "slack.com", method: GET}
@@ -126,12 +124,58 @@ rules:
     action: approval
     label: slack write
 
+  # Default for Slack — approval (credentials injected)
   - match: {domain_contains: "slack.com"}
-    action: deny
-    label: slack blocked
+    action: approval
+    label: slack unknown
 
   # ═══════════════════════════════════════════════════════════
-  # Everything else — free internet access
+  # Atlassian (credentials injected by proxy)
+  # ═══════════════════════════════════════════════════════════
+
+  - match: {domain_contains: "atlassian.com", method: GET}
+    action: allow
+    label: atlassian read
+
+  - match: {domain_contains: "atlassian.net", method: GET}
+    action: allow
+    label: atlassian read
+
+  - match: {domain_contains: "atlassian.com", method: POST}
+    action: approval
+    label: atlassian write
+
+  - match: {domain_contains: "atlassian.net", method: POST}
+    action: approval
+    label: atlassian write
+
+  - match: {domain_contains: "atlassian.com", method: PUT}
+    action: approval
+    label: atlassian update
+
+  - match: {domain_contains: "atlassian.net", method: PUT}
+    action: approval
+    label: atlassian update
+
+  - match: {domain_contains: "atlassian.com", method: DELETE}
+    action: approval
+    label: atlassian delete
+
+  - match: {domain_contains: "atlassian.net", method: DELETE}
+    action: approval
+    label: atlassian delete
+
+  # Default for Atlassian — approval (credentials injected)
+  - match: {domain_contains: "atlassian.com"}
+    action: approval
+    label: atlassian unknown
+
+  - match: {domain_contains: "atlassian.net"}
+    action: approval
+    label: atlassian unknown
+
+  # ═══════════════════════════════════════════════════════════
+  # Everything else — passthrough (no credentials injected)
   # ═══════════════════════════════════════════════════════════
 
   - match: {domain: "*"}

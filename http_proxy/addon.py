@@ -10,17 +10,18 @@ from shared.policy import Action, evaluate, load_rules
 from shared.approval import request_approval
 from shared.audit import log, AuditEntry
 from credentials import inject
+import providers
 
 logger = logging.getLogger("http_proxy")
 
 POLICY_PATH = Path(os.environ.get("HTTP_POLICY", "/etc/sandbox/http_policy.yaml"))
-VAULT_DIR = Path(os.environ.get("VAULT_DIR", "/vault"))
 CLIENT_ID = os.environ.get("CLIENT_ID", "default")
 
 
 class HttpPolicyAddon:
     def __init__(self):
         self.rules = load_rules(POLICY_PATH)
+        providers.setup()
 
     def request(self, flow: http.HTTPFlow):
         fields = {
@@ -33,7 +34,7 @@ class HttpPolicyAddon:
 
         if decision.action == Action.ALLOW:
             try:
-                inject(flow, VAULT_DIR, CLIENT_ID)
+                inject(flow)
             except Exception:
                 pass  # No credentials for this domain — proceed without injection
             log(AuditEntry("ALLOW", CLIENT_ID, decision.reason, fields))
@@ -51,7 +52,7 @@ class HttpPolicyAddon:
             approved = request_approval(decision.reason, summary)
             if approved:
                 try:
-                    inject(flow, VAULT_DIR, CLIENT_ID)
+                    inject(flow)
                 except Exception:
                     pass  # No credentials for this domain — proceed without injection
                 log(AuditEntry("APPROVED", CLIENT_ID, decision.reason, fields))

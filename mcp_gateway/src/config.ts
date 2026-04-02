@@ -2,8 +2,8 @@ import { readFileSync } from "fs";
 import { parse } from "yaml";
 
 export interface AuthConfig {
-  source: "vault" | "oauth";
-  token_key?: string;
+  source: "env" | "oauth";
+  env_var?: string;
   oauth?: {
     clientId?: string;
     callbackPort?: number;

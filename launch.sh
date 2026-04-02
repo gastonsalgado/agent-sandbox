@@ -1,11 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
-CLIENT_ID=${1:?Usage: launch.sh <client_id> <workspace_path>}
-WORKSPACE=${2:?Usage: launch.sh <client_id> <workspace_path>}
+CLIENT_ID=${1:?Usage: launch.sh <client_id> <workspace_path> [claude args...]}
+WORKSPACE=${2:?Usage: launch.sh <client_id> <workspace_path> [claude args...]}
+shift 2
+CLAUDE_ARGS="$@"
 
 CONFIG_DIR="${SANDBOX_CONFIG_DIR:-./config}/${CLIENT_ID}"
-VAULT_DIR="${VAULT_DIR:-./vault}"
 PROXY_PORT="${PROXY_PORT:-3128}"
 GATEWAY_PORT="${GATEWAY_PORT:-3129}"
 
@@ -22,7 +23,7 @@ fi
 # Verify proxy is running
 if ! curl -s -o /dev/null --connect-timeout 2 http://127.0.0.1:$PROXY_PORT 2>/dev/null; then
     echo "ERROR: proxy not running on port $PROXY_PORT" >&2
-    echo "Start it with: cd http_proxy && source .venv/bin/activate && CLIENT_ID=$CLIENT_ID VAULT_DIR=../vault HTTP_POLICY=../config/$CLIENT_ID/http_policy.yaml mitmdump -s addon.py -p $PROXY_PORT" >&2
+    echo "Start it with: cd http_proxy && source .venv/bin/activate && CLIENT_ID=$CLIENT_ID HTTP_POLICY=../config/$CLIENT_ID/http_policy.yaml GITHUB_TOKEN=\$(gh auth token) mitmdump -s addon.py -p $PROXY_PORT" >&2
     exit 1
 fi
 
@@ -95,4 +96,4 @@ docker run --rm -it \
     -e no_proxy="host.docker.internal,localhost,127.0.0.1" \
     --stop-timeout=30 \
     sandbox-agent \
-    timeout "$TIMEOUT" claude --dangerously-skip-permissions --continue ${VERBOSE:+--verbose} --debug
+    claude --dangerously-skip-permissions $CLAUDE_ARGS

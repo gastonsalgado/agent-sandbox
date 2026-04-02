@@ -8,7 +8,6 @@ import { UpstreamManager } from "./upstream.js";
 import { createGateway } from "./gateway.js";
 
 const MCP_POLICY = process.env.MCP_POLICY ?? "/etc/sandbox/mcp_policy.yaml";
-const VAULT_DIR = process.env.VAULT_DIR ?? "./vault";
 const CLIENT_ID = process.env.CLIENT_ID ?? "default";
 const GATEWAY_PORT = parseInt(process.env.GATEWAY_PORT ?? "3129");
 
@@ -17,7 +16,7 @@ async function main() {
   const rules = parseRules(config.rules);
   console.error(`Loaded ${rules.length} policy rules`);
 
-  const upstream = new UpstreamManager(VAULT_DIR, CLIENT_ID);
+  const upstream = new UpstreamManager();
   await upstream.start(config);
 
   const tools = upstream.getAllTools();

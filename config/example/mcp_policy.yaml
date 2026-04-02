@@ -9,8 +9,8 @@ upstreams:
     type: http
     url: "https://api.githubcopilot.com/mcp/"
     auth:
-      source: vault
-      token_key: github_token
+      source: env
+      env_var: GITHUB_TOKEN
 
   slack:
     type: http
@@ -21,8 +21,28 @@ upstreams:
         clientId: "1601185624273.8899143856786"
         callbackPort: 3118
 
+  memory:
+    type: sse
+    url: "http://localhost:8182/sse"
+
+  qmd:
+    type: http
+    url: "http://localhost:8181/mcp"
+
 # Tool-level policies
 rules:
+  # ═══════════════════════════════════════════════════════════
+  # Memory — all operations allowed (internal service, no creds)
+  # ═══════════════════════════════════════════════════════════
+  - match: {tool_contains: "memory_"}
+    action: allow
+
+  # ═══════════════════════════════════════════════════════════
+  # QMD — all operations allowed (internal service, no creds)
+  # ═══════════════════════════════════════════════════════════
+  - match: {tool_contains: "qmd_"}
+    action: allow
+
   # ═══════════════════════════════════════════════════════════
   # Reads — allowed
   # ═══════════════════════════════════════════════════════════

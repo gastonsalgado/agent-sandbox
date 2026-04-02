@@ -27,14 +27,10 @@ graph TD
             Proxy["HTTP Proxy (mitmproxy)\n- credential injection\n- policy enforcement\n- approval workflow"]
             Gateway["MCP Gateway (Node.js)\n- tool filtering\n- policy enforcement\n- approval workflow"]
         end
-        Vault[("Vault\n(credentials)")]
     end
 
     CLI -->|HTTPS traffic| Proxy
     MCP -->|MCP protocol| Gateway
-
-    Vault -.->|tokens| Proxy
-    Vault -.->|tokens| Gateway
 
     Proxy --> APIs["External APIs\n(GitHub, GCP, Slack)"]
     Gateway --> Upstreams["Upstream MCP Servers\n(Atlassian, GitHub, Slack)"]
@@ -86,18 +82,11 @@ docker build -t sandbox-agent -f container/Dockerfile container/
 
 ### 4. Set up credentials
 
-```bash
-# Create vault for your client
-mkdir -p vault/my-client
+Credentials are loaded from environment variables and SDKs — no vault files needed:
 
-# GitHub (from gh CLI)
-gh auth token > vault/my-client/github_token
-
-# GCP (access token, expires ~1h)
-gcloud auth print-access-token > vault/my-client/gcp_access_token
-
-chmod 600 vault/my-client/*
-```
+- **GitHub**: `GITHUB_TOKEN=$(gh auth token)` or set `GITHUB_TOKEN` env var
+- **GCP**: Uses Application Default Credentials (`gcloud auth application-default login`)
+- **Slack**: Set `SLACK_TOKEN` env var
 
 ### 5. Create client configuration
 
@@ -116,7 +105,7 @@ You need 3 terminals:
 ```bash
 cd http_proxy && source .venv/bin/activate
 CLIENT_ID=my-client \
-VAULT_DIR=../vault \
+GITHUB_TOKEN=$(gh auth token) \
 HTTP_POLICY=../config/my-client/http_policy.yaml \
 AUDIT_LOG=../logs/audit.jsonl \
 mitmdump -s addon.py -p 3128 --set confdir=~/.mitmproxy
@@ -126,7 +115,7 @@ mitmdump -s addon.py -p 3128 --set confdir=~/.mitmproxy
 ```bash
 cd mcp_gateway
 CLIENT_ID=my-client \
-VAULT_DIR=../vault \
+GITHUB_TOKEN=$(gh auth token) \
 MCP_POLICY=../config/my-client/mcp_policy.yaml \
 GATEWAY_PORT=3129 \
 npm start
@@ -189,8 +178,8 @@ upstreams:
     type: http
     url: "https://api.githubcopilot.com/mcp/"
     auth:
-      source: vault
-      token_key: github_token
+      source: env
+      env_var: GITHUB_TOKEN
 
 rules:
   - match: {tool_contains: "get"}
@@ -227,23 +216,23 @@ rules:
 
 | Threat | Mitigation |
 |--------|-----------|
-| Credential theft | No credentials in container. Vault on host only. Proxy injects at request time. |
+| Credential theft | No credentials in container. Tokens loaded from env vars and SDKs on host. Proxy injects at request time. |
 | Host access | iptables blocks all host ports except proxy. LAN blocked. |
 | Destructive operations | Default-deny for credentialed domains. Write operations require approval. |
 | Resource exhaustion | CPU, memory, PID limits on container. |
 | Runaway agent | Timeout wrapper (default 1h). |
 | Firewall bypass | Sudo excludes iptables/ip commands. Agent cannot modify firewall rules. |
-| Path traversal | Vault paths validated against root directory. |
 
 ## Project Structure
 
 ```
 agent-sandbox/
 +-- http_proxy/          # Python - mitmproxy addon
-|   +-- shared/          #   policy engine, vault, approval, audit
-|   +-- tests/           #   unit tests (46 tests)
+|   +-- shared/          #   policy engine, approval, audit
+|   +-- tests/           #   unit tests (54 tests)
 |   +-- addon.py         #   mitmproxy request handler
 |   +-- credentials.py   #   per-domain credential injection
+|   +-- providers.py     #   token providers (GCP SDK, env vars)
 |   +-- pyproject.toml
 +-- mcp_gateway/         # TypeScript - MCP tool proxy
 |   +-- src/
@@ -268,7 +257,6 @@ agent-sandbox/
 |       +-- mcp_policy.yaml
 |       +-- CLAUDE.md
 +-- launch.sh            # Orchestrates container launch
-+-- vault/               # Credentials (gitignored)
 +-- clients/             # Persistent client state (gitignored)
 ```
 
@@ -277,7 +265,8 @@ agent-sandbox/
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `CLIENT_ID` | `default` | Client identifier |
-| `VAULT_DIR` | `./vault` | Path to credential vault |
+| `GITHUB_TOKEN` | — | GitHub token (use `$(gh auth token)`) |
+| `SLACK_TOKEN` | — | Slack bot token |
 | `PROXY_PORT` | `3128` | HTTP proxy port |
 | `GATEWAY_PORT` | `3129` | MCP gateway port |
 | `CPU_LIMIT` | `2` | Container CPU cores |

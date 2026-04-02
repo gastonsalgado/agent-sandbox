@@ -10,9 +10,12 @@ __pycache__/
 dist/
 
 # Sensitive data
-vault/
 clients/
 logs/
+
+# Per-client configs (only example is tracked)
+config/*
+!config/example/
 
 # Generated at build time
 container/mitmproxy-ca-cert.pem

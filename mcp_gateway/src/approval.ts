@@ -7,6 +7,7 @@ interface Grant {
 
 class ApprovalService {
   private grants: Grant[] = [];
+  private pendingPromise: Promise<string> | null = null;
 
   async requestApproval(label: string, detail: string): Promise<boolean> {
     if (this.checkGrant(label)) return true;
@@ -17,15 +18,19 @@ class ApprovalService {
     process.stderr.write(`  Detail: ${detail}\n`);
     process.stderr.write(`${separator}\n`);
     process.stderr.write("  [y] Approve  [g] Approve + grant 5min  [n] Deny\n");
+    process.stderr.write("  > ");
 
-    const response = await this.prompt("  > ");
+    const response = await this.readLine();
 
     if (response === "g") {
       this.createGrant(label, 300);
+      process.stderr.write(`  Granted for 5 minutes\n`);
       return true;
     }
 
-    return response === "y";
+    const approved = response === "y";
+    process.stderr.write(approved ? `  Approved\n` : `  Denied\n`);
+    return approved;
   }
 
   createGrant(pattern: string, ttl: number = 300): void {
@@ -38,16 +43,18 @@ class ApprovalService {
     return this.grants.some((g) => label.includes(g.pattern));
   }
 
-  private prompt(query: string): Promise<string> {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stderr,
-    });
+  private readLine(): Promise<string> {
     return new Promise((resolve) => {
-      rl.question(query, (answer) => {
-        rl.close();
-        resolve(answer.trim().toLowerCase());
-      });
+      const onData = (data: Buffer) => {
+        process.stdin.removeListener("data", onData);
+        resolve(data.toString().trim().toLowerCase());
+      };
+
+      // Ensure stdin is in flowing mode
+      if (process.stdin.isPaused()) {
+        process.stdin.resume();
+      }
+      process.stdin.once("data", onData);
     });
   }
 }
