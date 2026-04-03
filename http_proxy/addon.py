@@ -16,6 +16,18 @@ logger = logging.getLogger("http_proxy")
 
 POLICY_PATH = Path(os.environ.get("HTTP_POLICY", "/etc/sandbox/http_policy.yaml"))
 CLIENT_ID = os.environ.get("CLIENT_ID", "default")
+MAX_BODY_BYTES = 1_048_576  # 1MB
+
+
+def _safe_body(flow: http.HTTPFlow) -> str:
+    """Extract request body for matching. Returns '' if too large or binary."""
+    content = flow.request.content
+    if not content or len(content) > MAX_BODY_BYTES:
+        return ""
+    try:
+        return content.decode("utf-8", errors="strict")
+    except (UnicodeDecodeError, ValueError):
+        return ""
 
 
 class HttpPolicyAddon:
@@ -29,8 +41,9 @@ class HttpPolicyAddon:
             "method": flow.request.method,
             "path": flow.request.path,
         }
+        match_fields = {**fields, "body": _safe_body(flow)}
 
-        decision = evaluate(fields, self.rules)
+        decision = evaluate(match_fields, self.rules)
 
         if decision.action == Action.ALLOW:
             try:

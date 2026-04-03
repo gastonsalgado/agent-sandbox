@@ -42,6 +42,27 @@ class TestMatches:
     def test_contains_with_missing_field(self):
         assert _matches({}, {"path_contains": "foo"}) is False
 
+    def test_body_contains_match(self):
+        assert _matches(
+            {"body": '{"query": "mutation { createIssue(input: {}) { id } }"}'},
+            {"body_contains": "mutation"},
+        ) is True
+
+    def test_body_contains_mismatch(self):
+        assert _matches(
+            {"body": '{"query": "query { viewer { login } }"}'},
+            {"body_contains": "mutation"},
+        ) is False
+
+    def test_body_contains_empty_body(self):
+        assert _matches({"body": ""}, {"body_contains": "mutation"}) is False
+
+    def test_body_contains_combined_with_path(self):
+        assert _matches(
+            {"path": "/graphql", "body": '{"query": "mutation { delete }"}'},
+            {"path": "/graphql", "body_contains": "mutation"},
+        ) is True
+
 
 class TestEvaluate:
     def test_first_match_wins(self):
