@@ -1,6 +1,6 @@
 import time
 import pytest
-from shared.approval import ApprovalService, _Grant
+from shared.approval import ApprovalService, _Grant, _read_with_timeout
 
 
 class TestGrantChecking:
@@ -40,30 +40,46 @@ class TestRequestApproval:
 
     def test_user_approves_with_y(self, monkeypatch):
         service = ApprovalService()
-        monkeypatch.setattr("builtins.input", lambda: "y")
+        monkeypatch.setattr("shared.approval._read_with_timeout", lambda _: "y")
         assert service.request_approval("git push", "POST github.com") is True
 
     def test_user_denies_with_n(self, monkeypatch):
         service = ApprovalService()
-        monkeypatch.setattr("builtins.input", lambda: "n")
+        monkeypatch.setattr("shared.approval._read_with_timeout", lambda _: "n")
         assert service.request_approval("git push", "POST github.com") is False
 
     def test_user_grants_with_g(self, monkeypatch):
         service = ApprovalService()
-        monkeypatch.setattr("builtins.input", lambda: "g")
+        monkeypatch.setattr("shared.approval._read_with_timeout", lambda _: "g")
         result = service.request_approval("git push", "POST github.com")
         assert result is True
         assert service._check_grant("git push") is True
 
     def test_unknown_input_denies(self, monkeypatch):
         service = ApprovalService()
-        monkeypatch.setattr("builtins.input", lambda: "maybe")
+        monkeypatch.setattr("shared.approval._read_with_timeout", lambda _: "maybe")
         assert service.request_approval("git push", "POST github.com") is False
 
     def test_empty_input_denies(self, monkeypatch):
         service = ApprovalService()
-        monkeypatch.setattr("builtins.input", lambda: "")
+        monkeypatch.setattr("shared.approval._read_with_timeout", lambda _: "")
         assert service.request_approval("git push", "POST github.com") is False
+
+    def test_timeout_denies(self, monkeypatch):
+        service = ApprovalService()
+        monkeypatch.setattr("shared.approval._read_with_timeout", lambda _: None)
+        assert service.request_approval("git push", "POST github.com") is False
+
+
+class TestReadWithTimeout:
+    def test_returns_input_when_ready(self, monkeypatch):
+        monkeypatch.setattr("builtins.input", lambda: "y")
+        assert _read_with_timeout(5) == "y"
+
+    def test_returns_none_on_timeout(self, monkeypatch):
+        import time
+        monkeypatch.setattr("builtins.input", lambda: time.sleep(10) or "y")
+        assert _read_with_timeout(1) is None
 
 
 class TestModuleFunctions:

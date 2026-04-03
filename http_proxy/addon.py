@@ -35,6 +35,10 @@ class HttpPolicyAddon:
         self.rules = load_rules(POLICY_PATH)
         providers.setup()
 
+    def requestheaders(self, flow: http.HTTPFlow):
+        """Disable streaming so the body is buffered and available in request()."""
+        flow.request.stream = False
+
     def request(self, flow: http.HTTPFlow):
         fields = {
             "domain": flow.request.pretty_host,
