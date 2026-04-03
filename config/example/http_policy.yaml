@@ -22,10 +22,15 @@ rules:
     action: allow
     label: github read
 
-  # GraphQL (gh CLI uses POST /graphql for reads and writes)
+  # GraphQL — mutations require approval (first-match-wins, so mutation rule must be first)
+  - match: {domain_contains: "github.com", path_contains: "/graphql", body_contains: "mutation"}
+    action: approval
+    label: github graphql mutation
+
+  # GraphQL — queries are safe reads
   - match: {domain_contains: "github.com", path_contains: "/graphql"}
     action: allow
-    label: github graphql
+    label: github graphql query
 
   # API writes
   - match: {domain_contains: "github.com", method: POST, path_contains: "/pulls"}
@@ -55,7 +60,6 @@ rules:
 
   # ═══════════════════════════════════════════════════════════
   # GCP (credentials injected by proxy)
-  # Default: deny. Only explicitly allowed operations pass.
   # ═══════════════════════════════════════════════════════════
 
   # Sensitive services — always require approval
