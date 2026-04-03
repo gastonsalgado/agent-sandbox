@@ -141,20 +141,20 @@ rules:
     action: allow
     label: github read
 
+  # GraphQL mutations - need approval (body_contains inspects POST body)
+  - match: {domain_contains: "github.com", path_contains: "/graphql", body_contains: "mutation"}
+    action: approval
+    label: github graphql mutation
+
+  # GraphQL queries - allowed
+  - match: {domain_contains: "github.com", path_contains: "/graphql"}
+    action: allow
+    label: github graphql query
+
   # Writes - need operator approval
   - match: {domain_contains: "github.com", path_contains: "git-receive-pack"}
     action: approval
     label: git push
-
-  # Sensitive services - always need approval
-  - match: {domain: "secretmanager.googleapis.com"}
-    action: approval
-    label: gcp secret manager
-
-  # Default deny for credentialed domains
-  - match: {domain_contains: "github.com"}
-    action: deny
-    label: github blocked
 
   # Everything else - free internet access
   - match: {domain: "*"}
@@ -197,7 +197,7 @@ rules:
 | Action | Behavior |
 |--------|----------|
 | `allow` | Pass through, inject credentials |
-| `approval` | Prompt operator: `[y] Approve [g] Grant 5min [n] Deny` |
+| `approval` | Prompt operator: `[y] Approve [g] Grant 5min [n] Deny`. Auto-denies after timeout (default 30s). |
 | `deny` | Block with error |
 
 ### Match Fields
@@ -205,9 +205,11 @@ rules:
 | Field | Used in | Description |
 |-------|---------|-------------|
 | `domain` | HTTP | Exact domain match |
-| `domain_contains` | HTTP | Substring match |
+| `domain_contains` | HTTP | Domain substring match |
 | `method` | HTTP | HTTP method (GET, POST, etc.) |
-| `path_contains` | HTTP | URL path substring |
+| `path` | HTTP | Exact path match |
+| `path_contains` | HTTP | Path substring match |
+| `body_contains` | HTTP | Request body substring match (for POST/GraphQL inspection) |
 | `tool` | MCP | Exact tool name |
 | `tool_contains` | MCP | Tool name substring |
 | `*` | Both | Wildcard (matches anything) |
@@ -229,7 +231,7 @@ rules:
 agent-sandbox/
 +-- http_proxy/          # Python - mitmproxy addon
 |   +-- shared/          #   policy engine, approval, audit
-|   +-- tests/           #   unit tests (54 tests)
+|   +-- tests/           #   unit tests (68 tests)
 |   +-- addon.py         #   mitmproxy request handler
 |   +-- credentials.py   #   per-domain credential injection
 |   +-- providers.py     #   token providers (GCP SDK, env vars)
@@ -273,6 +275,7 @@ agent-sandbox/
 | `MEMORY_LIMIT` | `4g` | Container memory limit |
 | `PIDS_LIMIT` | `256` | Container max processes |
 | `TIMEOUT` | `3600` | Execution timeout (seconds) |
+| `APPROVAL_TIMEOUT` | `30` | Seconds before auto-deny on approval prompts |
 | `VERBOSE` | unset | Set to `1` for Claude `--verbose` |
 
 ## Audit Log
